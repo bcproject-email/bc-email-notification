@@ -1,6 +1,9 @@
 table 50145 "PO Email Log"
 {
     DataClassification = ToBeClassified;
+    ObsoleteState = Pending;
+    ObsoleteReason = 'No longer used';
+    ObsoleteTag = '26.0';
 
     fields
     {

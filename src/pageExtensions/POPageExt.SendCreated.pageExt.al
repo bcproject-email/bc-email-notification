@@ -13,12 +13,12 @@ pageextension 50147 "PO Send Created Ext" extends "Purchase Order"
 
                 trigger OnAction()
                 var
+                    PurchaseHeader: Record "Purchase Header";
                     Helper: Codeunit "PO Email Helper";
-                    PH: Record "Purchase Header";
                 begin
-                    PH.Get(Rec."Document Type", Rec."No.");
-                    Helper.Notify_POCreated_OnRelease(PH);
-                    Message('Created email sent for PO %1.', PH."No.");
+                    PurchaseHeader.Get(Rec."Document Type", Rec."No.");
+                    Helper.Notify_POCreated_OnRelease(PurchaseHeader);
+                    Message('Created email sent for PO %1.', PurchaseHeader."No.");
                 end;
             }
         }

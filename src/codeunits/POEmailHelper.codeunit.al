@@ -1,15 +1,12 @@
 codeunit 50142 "PO Email Helper"
 {
-    var
-        PostedWrReportId: Integer; // set where used (Arrived)
-
     // =========================
     // Public notification APIs
     // =========================
 
     procedure Notify_POCreated_OnRelease(PurchHeader: Record "Purchase Header")
     var
-        PL: Record "Purchase Line";
+        PurchaseLine: Record "Purchase Line";
         b: TextBuilder;
         html: Text;
         subj: Text;
@@ -26,11 +23,12 @@ codeunit 50142 "PO Email Helper"
                      '<th align="left"  style="border:1px solid #ccc;">Location</th>' +
                      '</tr>');
 
-        PL.SetRange("Document Type", PurchHeader."Document Type");
-        PL.SetRange("Document No.", PurchHeader."No.");
-        if PL.FindSet() then
+        PurchaseLine.SetRange("Document Type", PurchHeader."Document Type");
+        PurchaseLine.SetRange("Document No.", PurchHeader."No.");
+        PurchaseLine.SetLoadFields(Type, "No.", Description, Quantity, "Location Code");
+        if PurchaseLine.FindSet() then
             repeat
-                if (PL.Type = PL.Type::Item) and (PL."No." <> '') then
+                if (PurchaseLine.Type = PurchaseLine.Type::Item) and (PurchaseLine."No." <> '') then
                     b.AppendLine(StrSubstNo(
                         '<tr>' +
                         '<td style="border:1px solid #ccc;">%1</td>' +
@@ -38,11 +36,11 @@ codeunit 50142 "PO Email Helper"
                         '<td style="border:1px solid #ccc;text-align:right;">%3</td>' +
                         '<td style="border:1px solid #ccc;">%4</td>' +
                         '</tr>',
-                        Html(PL."No."),
-                        Html(PL.Description),
-                        Html(Format(PL.Quantity)),
-                        Html(PL."Location Code")));
-            until PL.Next() = 0;
+                        Html(PurchaseLine."No."),
+                        Html(PurchaseLine.Description),
+                        Html(Format(PurchaseLine.Quantity)),
+                        Html(PurchaseLine."Location Code")));
+            until PurchaseLine.Next() = 0;
 
         b.AppendLine('</table>');
         b.AppendLine('<p>If you have any questions, please contact your Supply Chain Team: ' +
@@ -62,11 +60,9 @@ codeunit 50142 "PO Email Helper"
         subj: Text;
         etaDate: Date;
         etaTxt: Text;
-        Email: Codeunit Email;
-        EmailMsg: Codeunit "Email Message";
         ToList: List of [Text];
         // for table build
-        WRLine: Record "Warehouse Receipt Line";
+        WarehouseReceiptLine: Record "Warehouse Receipt Line";
         rowHtml: Text;
         anyRows: Boolean;
     begin
@@ -117,21 +113,21 @@ codeunit 50142 "PO Email Helper"
           '<th style="padding:8px 10px;border:1px solid #d9d9d9;text-align:left;">Location</th>' +
           '</tr>');
 
-        WRLine.SetRange("No.", WhseRcptHeader."No.");
-        WRLine.SetRange("Source Type", Database::"Purchase Line");
-        WRLine.SetRange("Source No.", RelatedPO."No.");
-        if WRLine.FindSet() then
+        WarehouseReceiptLine.SetRange("No.", WhseRcptHeader."No.");
+        WarehouseReceiptLine.SetRange("Source Type", Database::"Purchase Line");
+        WarehouseReceiptLine.SetRange("Source No.", RelatedPO."No.");
+        if WarehouseReceiptLine.FindSet() then
             repeat
                 anyRows := true;
                 rowHtml :=
                   '<tr>' +
-                  StrSubstNo('<td style="padding:8px 10px;border:1px solid #d9d9d9;">%1</td>', Html(WRLine."Item No.")) +
-                  StrSubstNo('<td style="padding:8px 10px;border:1px solid #d9d9d9;">%1</td>', Html(WRLine.Description)) +
-                  StrSubstNo('<td style="padding:8px 10px;border:1px solid #d9d9d9;text-align:right;">%1</td>', Format(WRLine.Quantity)) +
+                  StrSubstNo('<td style="padding:8px 10px;border:1px solid #d9d9d9;">%1</td>', Html(WarehouseReceiptLine."Item No.")) +
+                  StrSubstNo('<td style="padding:8px 10px;border:1px solid #d9d9d9;">%1</td>', Html(WarehouseReceiptLine.Description)) +
+                  StrSubstNo('<td style="padding:8px 10px;border:1px solid #d9d9d9;text-align:right;">%1</td>', Format(WarehouseReceiptLine.Quantity)) +
                   StrSubstNo('<td style="padding:8px 10px;border:1px solid #d9d9d9;">%1</td>', Html(WhseRcptHeader."Location Code")) +
                   '</tr>';
                 body.AppendLine(rowHtml);
-            until WRLine.Next() = 0;
+            until WarehouseReceiptLine.Next() = 0;
 
         if not anyRows then begin
             // fallback line so the email doesn’t look empty if filtering failed
@@ -159,8 +155,8 @@ codeunit 50142 "PO Email Helper"
             exit;
         end;
 
-        EmailMsg.Create(ToList, subj, html, true);
-        Email.Send(EmailMsg, Enum::"Email Scenario"::Default);
+        EmailMessage.Create(ToList, subj, html, true);
+        Email.Send(EmailMessage, Enum::"Email Scenario"::Default);
 
         Session.LogMessage(
             'wr.shipped.sent',
@@ -172,58 +168,23 @@ codeunit 50142 "PO Email Helper"
     // Decide ETA for the PO: header Expected Receipt Date; if empty, max of line Expected Receipt Date.
     local procedure GetPOETA(var PO: Record "Purchase Header"): Date
     var
-        POLine: Record "Purchase Line";
+        PurchaseLine: Record "Purchase Line";
         best: Date;
     begin
         if PO."Expected Receipt Date" <> 0D then
             exit(PO."Expected Receipt Date");
 
-        POLine.SetRange("Document Type", PO."Document Type");
-        POLine.SetRange("Document No.", PO."No.");
-        POLine.SetRange(Type, POLine.Type::Item);
-        if POLine.FindSet() then
+        PurchaseLine.SetRange("Document Type", PO."Document Type");
+        PurchaseLine.SetRange("Document No.", PO."No.");
+        PurchaseLine.SetRange(Type, PurchaseLine.Type::Item);
+        PurchaseLine.SetLoadFields("Expected Receipt Date");
+        if PurchaseLine.FindSet() then
             repeat
-                if POLine."Expected Receipt Date" > best then
-                    best := POLine."Expected Receipt Date";
-            until POLine.Next() = 0;
+                if PurchaseLine."Expected Receipt Date" > best then
+                    best := PurchaseLine."Expected Receipt Date";
+            until PurchaseLine.Next() = 0;
 
         exit(best); // 0D if still unknown
-    end;
-
-    // Helper: find the first non-blank ETA (header Expected -> header Promised -> earliest line date)
-    local procedure GetPOEarliestETA(var PurchHeader: Record "Purchase Header"): Text
-    var
-        PurchLine: Record "Purchase Line";
-        best: Date;
-        d: Date;
-    begin
-        if PurchHeader."Expected Receipt Date" <> 0D then
-            exit(Format(PurchHeader."Expected Receipt Date"));
-
-        if PurchHeader."Promised Receipt Date" <> 0D then
-            exit(Format(PurchHeader."Promised Receipt Date"));
-
-        // Scan lines for earliest Expected/Promised
-        best := DMY2DATE(31, 12, 9999);
-        PurchLine.SetRange("Document Type", PurchHeader."Document Type");
-        PurchLine.SetRange("Document No.", PurchHeader."No.");
-        if PurchLine.FindSet() then
-            repeat
-                d := 0D;
-                if PurchLine."Expected Receipt Date" <> 0D then
-                    d := PurchLine."Expected Receipt Date"
-                else
-                    if PurchLine."Promised Receipt Date" <> 0D then
-                        d := PurchLine."Promised Receipt Date";
-
-                if (d <> 0D) and (d < best) then
-                    best := d;
-            until PurchLine.Next() = 0;
-
-        if best <> DMY2DATE(31, 12, 9999) then
-            exit(Format(best));
-
-        exit('TBD');
     end;
 
     local procedure BuildHtmlTableFromPostedWRLines_All(PostedHdr: Record "Posted Whse. Receipt Header"; PONo: Code[20]): Text
@@ -246,6 +207,7 @@ codeunit 50142 "PO Email Helper"
         PWRL.SetRange("Source Type", Database::"Purchase Line");
         PWRL.SetRange("Source No.", PONo);
 
+        PWRL.SetLoadFields("Item No.", Description, Quantity, "Location Code");
         if PWRL.FindSet() then
             repeat
                 if PWRL."Item No." <> '' then
@@ -271,8 +233,6 @@ codeunit 50142 "PO Email Helper"
         subj: Text;
         body: TextBuilder;
         html: Text;
-        Email: Codeunit Email;
-        EmailMsg: Codeunit "Email Message";
         ToList: List of [Text];
         PostedLine: Record "Posted Whse. Receipt Line";
         LineCount: Integer;
@@ -290,10 +250,11 @@ codeunit 50142 "PO Email Helper"
         PostedLine.SetRange("No.", PostedHdr."No.");
         PostedLine.SetRange("Source Type", Database::"Purchase Line");
         PostedLine.SetRange("Source No.", RelatedPO."No.");
+        PostedLine.SetFilter("Item No.", '<>%1', ''); // only lines with item
+        PostedLine.SetLoadFields("Item No.");
         if PostedLine.FindSet() then
             repeat
-                if PostedLine."Item No." <> '' then
-                    LineCount += 1;
+                LineCount += 1;
             until PostedLine.Next() = 0;
 
         Session.LogMessage(
@@ -325,8 +286,8 @@ codeunit 50142 "PO Email Helper"
         if ToList.Count() = 0 then
             exit;
 
-        EmailMsg.Create(ToList, subj, html, true);
-        Email.Send(EmailMsg, Enum::"Email Scenario"::Default);
+        EmailMessage.Create(ToList, subj, html, true);
+        Email.Send(EmailMessage, Enum::"Email Scenario"::Default);
 
         Session.LogMessage(
             'arrived.sent',
@@ -338,157 +299,6 @@ codeunit 50142 "PO Email Helper"
     // =========================
     // Rendering / utilities
     // =========================
-
-    local procedure BuildHtmlTableFromPOLines(PurchHeader: Record "Purchase Header"): Text
-    var
-        PurchLine: Record "Purchase Line";
-        b: TextBuilder;
-    begin
-        b.AppendLine('<table border="0" cellpadding="6" cellspacing="0" style="border-collapse:collapse;width:100%;max-width:900px;">');
-        b.AppendLine('<tr style="background:#0a66c2;color:#fff;">' +
-                     '<th align="left">Item No.</th>' +
-                     '<th align="left">Description</th>' +
-                     '<th align="right">Qty</th>' +
-                     '<th align="left">Location</th>' +
-                     '</tr>');
-
-        PurchLine.SetRange("Document Type", PurchHeader."Document Type");
-        PurchLine.SetRange("Document No.", PurchHeader."No.");
-        if PurchLine.FindSet() then
-            repeat
-                if (PurchLine.Type = PurchLine.Type::Item) and (PurchLine."No." <> '') then
-                    b.AppendLine(StrSubstNo(
-                        '<tr><td>%1</td><td>%2</td><td align="right">%3</td><td>%4</td></tr>',
-                        Html(PurchLine."No."),
-                        Html(PurchLine.Description),
-                        Html(Format(PurchLine.Quantity)),
-                        Html(PurchLine."Location Code")));
-            until PurchLine.Next() = 0;
-
-        b.AppendLine('</table>');
-        exit(b.ToText());
-    end;
-
-    local procedure BuildHtmlTableFromWhseRcptLines(WhseRcptHeader: Record "Warehouse Receipt Header"; PONo: Code[20]): Text
-    var
-        WhseRcptLine: Record "Warehouse Receipt Line";
-        b: TextBuilder;
-    begin
-        b.AppendLine('<table border="0" cellpadding="6" cellspacing="0" style="border-collapse:collapse;width:100%;max-width:900px;">');
-        b.AppendLine('<tr style="background:#0a66c2;color:#fff;">' +
-                     '<th align="left">Item No.</th>' +
-                     '<th align="left">Description</th>' +
-                     '<th align="right">Qty</th>' +
-                     '<th align="left">Location</th>' +
-                     '</tr>');
-
-        WhseRcptLine.SetRange("No.", WhseRcptHeader."No.");
-        WhseRcptLine.SetRange("Source Type", Database::"Purchase Line");
-        WhseRcptLine.SetRange("Source No.", PONo);
-        if WhseRcptLine.FindSet() then
-            repeat
-                if WhseRcptLine."Item No." <> '' then
-                    b.AppendLine(StrSubstNo(
-                        '<tr><td>%1</td><td>%2</td><td align="right">%3</td><td>%4</td></tr>',
-                        Html(WhseRcptLine."Item No."),
-                        Html(WhseRcptLine.Description),
-                        Html(Format(WhseRcptLine.Quantity)),
-                        Html(WhseRcptLine."Location Code")));
-            until WhseRcptLine.Next() = 0;
-
-        b.AppendLine('</table>');
-        exit(b.ToText());
-    end;
-
-    local procedure DispatchArrived(PostedNo: Code[20]; FromUnpostedNo: Code[20]; SourceTag: Text[10])
-    var
-        Helper: Codeunit "PO Email Helper";
-        EmailState: Codeunit "PO Email State"; // ✅ add this so it's in scope
-        PostedHdr: Record "Posted Whse. Receipt Header";
-        PostedLine: Record "Posted Whse. Receipt Line";
-        PurchHeader: Record "Purchase Header";
-        PONumbers: List of [Code[20]];
-        PONo: Code[20];
-        RetryCount: Integer;
-    begin
-        if PostedNo = '' then
-            exit;
-
-        if not EmailState.ShouldSendArrived(PostedNo) then
-            exit;
-
-        if not PostedHdr.Get(PostedNo) then
-            exit;
-
-        // 🔄 Retry loop: wait for posted lines to be committed
-        RetryCount := 0;
-        repeat
-            Clear(PostedLine);
-            PostedLine.SetRange("No.", PostedNo);
-            if PostedLine.FindFirst() then
-                break;
-            Sleep(1000); // wait 1 sec
-            RetryCount += 1;
-        until RetryCount > 10; // max 10s
-
-        if not PostedLine.FindFirst() then begin
-            Session.LogMessage(
-                'wr.arrived.nolines',
-                StrSubstNo('Posted WR %1 still has no lines after waiting.', PostedNo),
-                Verbosity::Normal, DataClassification::SystemMetadata, TelemetryScope::ExtensionPublisher,
-                'PostedWR', PostedNo);
-            exit;
-        end;
-
-        // ✅ Collect distinct POs
-        PostedLine.SetRange("No.", PostedNo);
-        if PostedLine.FindSet() then
-            repeat
-                if PostedLine."Source Type" = Database::"Purchase Line" then begin
-                    PONo := PostedLine."Source No.";
-                    if (PONo <> '') and not PONumbers.Contains(PONo) then
-                        PONumbers.Add(PONo);
-                end;
-            until PostedLine.Next() = 0;
-
-        foreach PONo in PONumbers do
-            if PurchHeader.Get(PurchHeader."Document Type"::Order, PONo) then
-                Helper.Notify_Arrived_OnWhseReceiptPosted(PostedHdr, PurchHeader);
-
-        EmailState.MarkArrivedSent(PostedNo);
-    end;
-
-    local procedure BuildHtmlTableFromPostedWRLines(PostedHdr: Record "Posted Whse. Receipt Header"; PONo: Code[20]): Text
-    var
-        PwrLine: Record "Posted Whse. Receipt Line";
-        b: TextBuilder;
-    begin
-        b.AppendLine('<table border="0" cellpadding="6" cellspacing="0" style="border-collapse:collapse;width:100%;max-width:900px;">');
-        b.AppendLine('<tr style="background:#0a66c2;color:#fff;">' +
-                     '<th align="left">Item No.</th>' +
-                     '<th align="left">Description</th>' +
-                     '<th align="right">Qty</th>' +
-                     '<th align="left">Location</th>' +
-                     '</tr>');
-
-        PwrLine.SetRange("No.", PostedHdr."No.");
-        PwrLine.SetRange("Source Type", Database::"Purchase Line");
-        PwrLine.SetRange("Source No.", PONo);
-
-        if PwrLine.FindSet() then
-            repeat
-                if PwrLine."Item No." <> '' then
-                    b.AppendLine(StrSubstNo(
-                        '<tr><td>%1</td><td>%2</td><td align="right">%3</td><td>%4</td></tr>',
-                        Html(PwrLine."Item No."),
-                        Html(PwrLine.Description),
-                        Html(Format(PwrLine.Quantity)),
-                        Html(PwrLine."Location Code")));
-            until PwrLine.Next() = 0;
-
-        b.AppendLine('</table>');
-        exit(b.ToText());
-    end;
 
     // ---------------- Recipients ----------------
 
@@ -523,9 +333,6 @@ codeunit 50142 "PO Email Helper"
     // ---------------- Send email ----------------
 
     local procedure SendEmail(SubjectTxt: Text; BodyHtml: Text; ToList: List of [Text])
-    var
-        Email: Codeunit Email;
-        EmailMessage: Codeunit "Email Message";
     begin
         if ToList.Count() = 0 then
             exit;
@@ -584,4 +391,8 @@ codeunit 50142 "PO Email Helper"
         end;
         exit(R);
     end;
+
+    var
+        Email: Codeunit Email;
+        EmailMessage: Codeunit "Email Message";
 }

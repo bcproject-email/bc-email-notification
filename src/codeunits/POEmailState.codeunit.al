@@ -8,21 +8,25 @@ codeunit 50146 "PO Email State"
         uniquePos: List of [Code[20]];
         PostedeReceiptHeaderNo: Code[20];
 
+    [Obsolete('No longer used, will be removed in future versions.')]
     procedure ShouldSendShipped(ReceiptNo: Code[20]): Boolean
     begin
         exit(not ShippedSent.ContainsKey(ReceiptNo));
     end;
 
+    [Obsolete('No longer used, will be removed in future versions.')]
     procedure MarkShippedSent(ReceiptNo: Code[20])
     begin
         ShippedSent.Set(ReceiptNo, true);
     end;
 
+    [Obsolete('No longer used, will be removed in future versions.')]
     procedure ShouldSendArrived(PostedReceiptNo: Code[20]): Boolean
     begin
         exit(not ArrivedSent.ContainsKey(PostedReceiptNo));
     end;
 
+    [Obsolete('No longer used, will be removed in future versions.')]
     procedure MarkArrivedSent(PostedReceiptNo: Code[20])
     begin
         ArrivedSent.Set(PostedReceiptNo, true);
@@ -55,6 +59,7 @@ codeunit 50146 "PO Email State"
         CLEAR(UniquePos);
     end;
 
+    [Obsolete('No longer used, will be removed in future versions.')]
     procedure ResetAll()
     begin
         CLEAR(ShippedSent);
