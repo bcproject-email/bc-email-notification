@@ -65,6 +65,8 @@ codeunit 50142 "PO Email Helper"
         WarehouseReceiptLine: Record "Warehouse Receipt Line";
         rowHtml: Text;
         anyRows: Boolean;
+        EmailMessage: Codeunit "Email Message";
+        Email: Codeunit Email;
     begin
         // --- telemetry: start
         Session.LogMessage(
@@ -236,6 +238,8 @@ codeunit 50142 "PO Email Helper"
         ToList: List of [Text];
         PostedLine: Record "Posted Whse. Receipt Line";
         LineCount: Integer;
+        EmailMessage: Codeunit "Email Message";
+        Email: Codeunit Email;
     begin
         // ── LOG: start
         Session.LogMessage(
@@ -333,6 +337,9 @@ codeunit 50142 "PO Email Helper"
     // ---------------- Send email ----------------
 
     local procedure SendEmail(SubjectTxt: Text; BodyHtml: Text; ToList: List of [Text])
+    var
+        EmailMessage: Codeunit "Email Message";
+        Email: Codeunit Email;
     begin
         if ToList.Count() = 0 then
             exit;
@@ -393,6 +400,6 @@ codeunit 50142 "PO Email Helper"
     end;
 
     var
-        Email: Codeunit Email;
-        EmailMessage: Codeunit "Email Message";
+    // Email: Codeunit Email;
+    // EmailMessage: Codeunit "Email Message";
 }
