@@ -398,8 +398,4 @@ codeunit 50142 "PO Email Helper"
         end;
         exit(R);
     end;
-
-    var
-    // Email: Codeunit Email;
-    // EmailMessage: Codeunit "Email Message";
 }
