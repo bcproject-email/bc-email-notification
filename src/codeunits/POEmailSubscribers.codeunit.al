@@ -11,6 +11,7 @@ codeunit 50143 "PO Email Subscribers"
     begin
         if PurchaseHeader."Document Type" <> PurchaseHeader."Document Type"::Order then
             exit;
+
         Helper.Notify_POCreated_OnRelease(PurchaseHeader);
     end;
 
@@ -61,7 +62,7 @@ codeunit 50143 "PO Email Subscribers"
         UniquePos: List of [Code[20]];
     begin
         if CounterSourceDocOK <> CounterSourceDocTotal then
-            exit; // Some error occurred, skip
+            exit;
 
         if not PostedHdr.Get(EmailState.GetPostedReceiptHeaderNo()) then
             exit;

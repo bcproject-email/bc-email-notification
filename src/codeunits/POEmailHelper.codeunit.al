@@ -11,6 +11,9 @@ codeunit 50142 "PO Email Helper"
         html: Text;
         subj: Text;
     begin
+        if (PurchHeader."Send E-mail To" = '') then
+            exit;
+
         b.AppendLine('<p>Dear Colleague,</p>');
         b.AppendLine(StrSubstNo('<p>PO <strong>#%1</strong> has been created per your request. You will receive another notification when your item(s) ship. The items and quantities are:</p>', Html(PurchHeader."No.")));
 
@@ -241,6 +244,9 @@ codeunit 50142 "PO Email Helper"
         EmailMessage: Codeunit "Email Message";
         Email: Codeunit Email;
     begin
+        if RelatedPO."Send E-mail To" = '' then
+            exit;
+
         // ── LOG: start
         Session.LogMessage(
             'arrived.start',
@@ -287,8 +293,6 @@ codeunit 50142 "PO Email Helper"
 
         // Recipients + send
         ToList := BuildRecipientListFromPO(RelatedPO);
-        if ToList.Count() = 0 then
-            exit;
 
         EmailMessage.Create(ToList, subj, html, true);
         Email.Send(EmailMessage, Enum::"Email Scenario"::Default);
@@ -311,27 +315,7 @@ codeunit 50142 "PO Email Helper"
         list: List of [Text];
         addr: Text;
     begin
-        addr := ResolvePOPrimaryEmail(PurchHeader);
-        if addr <> '' then
-            list.Add(addr);
-        exit(list);
-    end;
-
-    local procedure ResolvePOPrimaryEmail(PurchHeader: Record "Purchase Header"): Text
-    var
-        Vendor: Record Vendor;
-        Contact: Record Contact;
-    begin
-        if PurchHeader."Buy-from Contact No." <> '' then
-            if Contact.Get(PurchHeader."Buy-from Contact No.") then
-                if Contact."E-Mail" <> '' then
-                    exit(Contact."E-Mail");
-
-        if Vendor.Get(PurchHeader."Buy-from Vendor No.") then
-            if Vendor."E-Mail" <> '' then
-                exit(Vendor."E-Mail");
-
-        exit('');
+        exit(PurchHeader."Send E-mail To".Split(';'));
     end;
 
     // ---------------- Send email ----------------

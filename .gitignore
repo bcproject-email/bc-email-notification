@@ -1,3 +1,3 @@
 *.app
 *.alcache
-rad.json
+.vscode/rad.json
