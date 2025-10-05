@@ -40,38 +40,12 @@ codeunit 50143 "PO Email Subscribers"
     end;
 
     // 3) WR POSTED -> "Arrived"
-    [EventSubscriber(ObjectType::Codeunit, Codeunit::"Whse.-Post Receipt", OnAfterPostedWhseRcptLineInsert, '', false, false)]
-    local procedure OnAfterPostedWhseRcptLineInsert(var PostedWhseReceiptLine: Record "Posted Whse. Receipt Line"; WarehouseReceiptLine: Record "Warehouse Receipt Line")
-    var
-        PONo: Code[20];
+    [EventSubscriber(ObjectType::Codeunit, Codeunit::"Purch.-Post", OnAfterProcessPurchLines, '', false, false)]
+    local procedure OnAfterProcessPurchLines(var PurchHeader: Record "Purchase Header"; var PurchRcptHeader: Record "Purch. Rcpt. Header")
     begin
-        if PostedWhseReceiptLine."Source Type" <> Database::"Purchase Line" then
-            exit;
+        if PurchRcptHeader."No." = '' then
+            exit;   // No receipt created
 
-        PONo := PostedWhseReceiptLine."Source No.";
-        EmailState.AddUniquePOs(PONo);
-        EmailState.SetPostedReceiptHeaderNo(PostedWhseReceiptLine."No.");
-    end;
-
-    [EventSubscriber(ObjectType::Codeunit, Codeunit::"Whse.-Post Receipt", OnAfterCode, '', false, false)]
-    local procedure OnAfterCode(CounterSourceDocOK: Integer; CounterSourceDocTotal: Integer)
-    var
-        PostedHdr: Record "Posted Whse. Receipt Header";
-        PurchHeader: Record "Purchase Header";
-        PONo: Code[20];
-        UniquePos: List of [Code[20]];
-    begin
-        if CounterSourceDocOK <> CounterSourceDocTotal then
-            exit;
-
-        if not PostedHdr.Get(EmailState.GetPostedReceiptHeaderNo()) then
-            exit;
-
-        EmailState.GetUniquePos(UniquePos);
-        foreach PONo in UniquePOs do
-            if PurchHeader.Get(PurchHeader."Document Type"::Order, PONo) then
-                Helper.Notify_Arrived_OnWhseReceiptPosted(PostedHdr, PurchHeader);
-
-        EmailState.ClearUniquePos();
+        Helper.Notify_Arrived_OnWhseReceiptPosted(PurchRcptHeader, PurchHeader);
     end;
 }

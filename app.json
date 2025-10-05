@@ -10,6 +10,15 @@
   "platform": "25.0.0.0",
   "application": "25.0.0.0",
 
+  "dependencies": [
+    {
+      "id": "5ef04e42-20ef-47e8-b22e-80c90030e571",
+      "name": "BestwayUSA",
+      "publisher": "Innovia Consulting",
+      "version": "1.0.5.9"
+      }
+  ],
+
   "idRanges": [{ "from": 50100, "to": 50149 }],
   "runtime": "14.0",
   "features": ["NoImplicitWith"],

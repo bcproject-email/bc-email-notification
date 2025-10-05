@@ -47,8 +47,7 @@ codeunit 50142 "PO Email Helper"
 
         b.AppendLine('</table>');
         b.AppendLine('<p>If you have any questions, please contact your Supply Chain Team: ' +
-                     '<a href="mailto:cyndy.peterson@bestwaycorp.us">cyndy.peterson@bestwaycorp.us</a> and/or ' +
-                     '<a href="mailto:Eric.Eichstaedt@bestwaycorp.us">Eric.Eichstaedt@bestwaycorp.us</a>.</p>');
+                     '<a href="mailto:dom@bestwaycorp.us">dom@bestwaycorp.us</a>');
 
         subj := StrSubstNo('PO %1 Created', PurchHeader."No.");
         html := WrapHtml(subj, b.ToText());
@@ -161,7 +160,7 @@ codeunit 50142 "PO Email Helper"
         end;
 
         EmailMessage.Create(ToList, subj, html, true);
-        Email.Send(EmailMessage, Enum::"Email Scenario"::Default);
+        Email.Send(EmailMessage, Enum::"Email Scenario"::"Custom Purchase Emails");
 
         Session.LogMessage(
             'wr.shipped.sent',
@@ -192,9 +191,9 @@ codeunit 50142 "PO Email Helper"
         exit(best); // 0D if still unknown
     end;
 
-    local procedure BuildHtmlTableFromPostedWRLines_All(PostedHdr: Record "Posted Whse. Receipt Header"; PONo: Code[20]): Text
+    local procedure BuildHtmlTableFromPostedWRLines_All(PurchRcptHeader: Record "Purch. Rcpt. Header"; PONo: Code[20]): Text
     var
-        PWRL: Record "Posted Whse. Receipt Line";
+        PurchRcptLine: Record "Purch. Rcpt. Line";
         t: TextBuilder;
     begin
         t.AppendLine('<table border="1" cellpadding="8" cellspacing="0" ' +
@@ -208,14 +207,13 @@ codeunit 50142 "PO Email Helper"
                      '</tr>');
 
         // Only lines for *this* posted receipt and *this* PO
-        PWRL.SetRange("No.", PostedHdr."No.");
-        PWRL.SetRange("Source Type", Database::"Purchase Line");
-        PWRL.SetRange("Source No.", PONo);
+        PurchRcptLine.SetRange("Document No.", PurchRcptHeader."No.");
+        PurchRcptLine.SetRange(Type, PurchRcptLine.Type::Item);
 
-        PWRL.SetLoadFields("Item No.", Description, Quantity, "Location Code");
-        if PWRL.FindSet() then
+        PurchRcptLine.SetLoadFields("No.", Description, Quantity, "Location Code");
+        if PurchRcptLine.FindSet() then
             repeat
-                if PWRL."Item No." <> '' then
+                if PurchRcptLine."No." <> '' then
                     t.AppendLine(StrSubstNo(
                         '<tr>' +
                         '<td style="border:1px solid #ccc;">%1</td>' +
@@ -223,23 +221,23 @@ codeunit 50142 "PO Email Helper"
                         '<td style="border:1px solid #ccc;text-align:right;">%3</td>' +
                         '<td style="border:1px solid #ccc;">%4</td>' +
                         '</tr>',
-                        Html(PWRL."Item No."),
-                        Html(PWRL.Description),
-                        Html(Format(PWRL.Quantity)), // use Quantity on posted line
-                        Html(PWRL."Location Code")));
-            until PWRL.Next() = 0;
+                        Html(PurchRcptLine."No."),
+                        Html(PurchRcptLine.Description),
+                        Html(Format(PurchRcptLine.Quantity)), // use Quantity on posted line
+                        Html(PurchRcptLine."Location Code")));
+            until PurchRcptLine.Next() = 0;
 
         t.AppendLine('</table>');
         exit(t.ToText());
     end;
 
-    procedure Notify_Arrived_OnWhseReceiptPosted(PostedHdr: Record "Posted Whse. Receipt Header"; RelatedPO: Record "Purchase Header")
+    procedure Notify_Arrived_OnWhseReceiptPosted(PurchRcptHeader: Record "Purch. Rcpt. Header"; RelatedPO: Record "Purchase Header")
     var
         subj: Text;
         body: TextBuilder;
         html: Text;
         ToList: List of [Text];
-        PostedLine: Record "Posted Whse. Receipt Line";
+        PurchRcptLine: Record "Purch. Rcpt. Line";
         LineCount: Integer;
         EmailMessage: Codeunit "Email Message";
         Email: Codeunit Email;
@@ -250,26 +248,25 @@ codeunit 50142 "PO Email Helper"
         // ── LOG: start
         Session.LogMessage(
             'arrived.start',
-            StrSubstNo('Arrived email start. PostedWR=%1, PO=%2', PostedHdr."No.", RelatedPO."No."),
+            StrSubstNo('Arrived email start. PostedWR=%1, PO=%2', PurchRcptHeader."No.", RelatedPO."No."),
             Verbosity::Normal, DataClassification::SystemMetadata, TelemetryScope::ExtensionPublisher,
-            'PostedWR', PostedHdr."No.");
+            'PostedWR', PurchRcptHeader."No.");
 
         subj := StrSubstNo('PO %1 Arrived', RelatedPO."No.");
 
-        // Count posted lines for this posted receipt and this PO
-        PostedLine.SetRange("No.", PostedHdr."No.");
-        PostedLine.SetRange("Source Type", Database::"Purchase Line");
-        PostedLine.SetRange("Source No.", RelatedPO."No.");
-        PostedLine.SetFilter("Item No.", '<>%1', ''); // only lines with item
-        PostedLine.SetLoadFields("Item No.");
-        if PostedLine.FindSet() then
+        // Count posted lines for this posted receipt and this PO);
+
+        PurchRcptLine.SetRange("Document No.", PurchRcptHeader."No.");
+        PurchRcptLine.SetRange(Type, PurchRcptLine.Type::Item);
+        PurchRcptLine.SetLoadFields("No.");
+        if PurchRcptLine.FindSet() then
             repeat
                 LineCount += 1;
-            until PostedLine.Next() = 0;
+            until PurchRcptLine.Next() = 0;
 
         Session.LogMessage(
             'arrived.count',
-            StrSubstNo('Arrived posted lines: %1 (PostedWR=%2, PO=%3)', LineCount, PostedHdr."No.", RelatedPO."No."),
+            StrSubstNo('Arrived posted lines: %1 (PostedWR=%2, PO=%3)', LineCount, PurchRcptHeader."No.", RelatedPO."No."),
             Verbosity::Normal, DataClassification::SystemMetadata, TelemetryScope::ExtensionPublisher,
             'Count', Format(LineCount));
 
@@ -278,16 +275,15 @@ codeunit 50142 "PO Email Helper"
 
         body.AppendLine('<p>Dear Colleague,</p>');
         body.AppendLine(StrSubstNo(
-            '<p>PO <strong>#%1</strong> has <strong>Arrived</strong> at our Bestway USA Chandler Warehouse!! ' +
+            '<p>PO <strong>#%1</strong> has been <strong>Received</strong>!! ' +
             'Please allow 3–5 days for Container Unloading &amp; Putaways. The items and quantities on this shipment are:</p>',
             Html(RelatedPO."No.")));
 
         // Bordered table with all posted lines (right-aligned Qty)
-        body.AppendLine(BuildHtmlTableFromPostedWRLines_All(PostedHdr, RelatedPO."No."));
+        body.AppendLine(BuildHtmlTableFromPostedWRLines_All(PurchRcptHeader, RelatedPO."No."));
 
         body.AppendLine('<p>If you have any questions, please contact your Supply Chain Team: ' +
-                        '<a href="mailto:cyndy.peterson@bestwaycorp.us">cyndy.peterson@bestwaycorp.us</a> and/or ' +
-                        '<a href="mailto:Eric.Eichstaedt@bestwaycorp.us">Eric.Eichstaedt@bestwaycorp.us</a>.</p>');
+                        '<a href="mailto:dom@bestwaycorp.us">dom@bestwaycorp.us</a>');
 
         html := WrapHtml(subj, body.ToText());
 
@@ -295,13 +291,13 @@ codeunit 50142 "PO Email Helper"
         ToList := BuildRecipientListFromPO(RelatedPO);
 
         EmailMessage.Create(ToList, subj, html, true);
-        Email.Send(EmailMessage, Enum::"Email Scenario"::Default);
+        Email.Send(EmailMessage, Enum::"Email Scenario"::"Custom Purchase Emails");
 
         Session.LogMessage(
             'arrived.sent',
-            StrSubstNo('Arrived email sent. PostedWR=%1, PO=%2, Lines=%3', PostedHdr."No.", RelatedPO."No.", LineCount),
+            StrSubstNo('Arrived email sent. PostedWR=%1, PO=%2, Lines=%3', PurchRcptHeader."No.", RelatedPO."No.", LineCount),
             Verbosity::Normal, DataClassification::SystemMetadata, TelemetryScope::ExtensionPublisher,
-            'PostedWR', PostedHdr."No.");
+            'PostedWR', PurchRcptHeader."No.");
     end;
 
     // =========================
@@ -329,7 +325,7 @@ codeunit 50142 "PO Email Helper"
             exit;
 
         EmailMessage.Create(ToList, SubjectTxt, BodyHtml, true);
-        Email.Send(EmailMessage, Enum::"Email Scenario"::Default);
+        Email.Send(EmailMessage, Enum::"Email Scenario"::"Custom Purchase Emails");
     end;
 
     // ---------------- HTML helpers ----------------
@@ -351,8 +347,7 @@ codeunit 50142 "PO Email Helper"
     begin
         exit(
           '<p>If you have any questions, please contact your Supply Chain Team: ' +
-          '<a href="mailto:cyndy.peterson@bestwaycorp.us">cyndy.peterson@bestwaycorp.us</a> ' +
-          'and/or <a href="mailto:Eric.Eichstaedt@bestwaycorp.us">Eric.Eichstaedt@bestwaycorp.us</a>.</p>');
+          '<a href="mailto:dom@bestwaycorp.us">dom@bestwaycorp.us</a>');
     end;
 
     // Minimal HTML encoding (no ConvertStr; avoid reserved word "With")

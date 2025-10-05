@@ -1,3 +1,4 @@
 *.app
 *.alcache
 .vscode/rad.json
+settings.json
