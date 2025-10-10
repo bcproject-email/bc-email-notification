@@ -1,8 +1,7 @@
-codeunit 50143 "PO Email Subscribers"
+codeunit 80104 "PO Email Subscribers"
 {
 
     var
-        EmailState: Codeunit "PO Email State";
         Helper: Codeunit "PO Email Helper";
 
     // 1) PO Released -> "PO Created"

@@ -1,8 +1,8 @@
 {
   "id": "6E56CA7D-E6F5-4AAC-8F2E-BEA9F0E5D49A",
   "name": "PO - Email Notification",
-  "publisher": "Default Publisher",
-  "version": "1.0.80.0",
+  "publisher": "Sataware Technologies",
+  "version": "1.0.88.5",
 
   "brief": "PO lifecycle notification emails",
   "description": "Sends emails when a Purchase Order is released, a Warehouse Receipt is created, and when a Warehouse Receipt is posted.",
@@ -11,15 +11,9 @@
   "application": "25.0.0.0",
 
   "dependencies": [
-    {
-      "id": "5ef04e42-20ef-47e8-b22e-80c90030e571",
-      "name": "BestwayUSA",
-      "publisher": "Innovia Consulting",
-      "version": "1.0.5.9"
-      }
   ],
 
-  "idRanges": [{ "from": 50100, "to": 50149 }],
+  "idRanges": [{ "from": 80100, "to": 80149 }],
   "runtime": "14.0",
   "features": ["NoImplicitWith"],
   "resourceExposurePolicy": {

@@ -1,4 +1,4 @@
-codeunit 50144 EmailTransferSubscribers
+codeunit 80101 EmailTransferSubscribers
 {
 
     [EventSubscriber(ObjectType::Report, Report::"Get Source Documents", OnBeforeWhseReceiptHeaderInsert, '', false, false)]

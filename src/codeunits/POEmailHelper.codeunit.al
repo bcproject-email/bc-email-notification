@@ -1,4 +1,4 @@
-codeunit 50142 "PO Email Helper"
+codeunit 80103 "PO Email Helper"
 {
     // =========================
     // Public notification APIs

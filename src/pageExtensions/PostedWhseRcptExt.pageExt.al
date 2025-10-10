@@ -1,4 +1,4 @@
-pageextension 50137 "Posted Whse Rcpt Ext" extends "Posted Whse. Receipt"
+pageextension 80100 "Posted Whse Rcpt Ext" extends "Posted Whse. Receipt"
 {
     layout
     {

@@ -1,4 +1,4 @@
-pageextension 50136 "Whse Rcpt Ext" extends "Warehouse Receipt"
+pageextension 80102 "Whse Rcpt Ext" extends "Warehouse Receipt"
 {
     layout
     {

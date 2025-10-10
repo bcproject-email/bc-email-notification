@@ -1,4 +1,4 @@
-codeunit 50148 "PO Email Dispatcher"
+codeunit 80102 "PO Email Dispatcher"
 {
     TableNo = "Purchase Header";
 
